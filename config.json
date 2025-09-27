@@ -1,0 +1,33 @@
+{
+  "prefix": "!",
+  "presenceChannelId": "1419758606043058230",
+  "presenceIntervalMinutes": 30,
+  "activity": {
+    "name": "Eyyubi Packs ile",
+    "type": "PLAYING",
+    "status": "online"
+  },
+  "clientId": "1419755936368689244",
+  "founderRoleId": "1419758604159815784", 
+  "guildId": "1419758604088643684",
+  "welcomeChannelId": "1419758606043058232",
+  "leaveChannelId": "1419758606043058232",
+  "autoRoleId": "1419758604088643687",
+  "normalRoleId": "1419758604088643687",
+  "promotions": [
+    "1419758604088643693",
+    "1419759394878652438",
+    "1419758604159815782",
+    "1419758604159815783"
+  ],
+  "adExemptChannelId": "1421540291235811350",
+  "logChannelId": "1419758607054147761",
+  "texturepackChannelId": "1420153486032769054",
+  "ticketCategoryId": "1419758607054147755",
+  "ticketArchiveCategoryId": "TICKET_ARCHIVE_CATEGORY_ID",
+  "ticketStaffRoleId": "1419758604088643693",           
+  "ticketPanelChannelId": "1419758606500233257",   
+  "ticketPrefix": "ticket",                              
+  "ticketCloseTimeoutMinutes": 1                 
+  
+}
