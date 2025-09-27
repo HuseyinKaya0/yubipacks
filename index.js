@@ -505,5 +505,6 @@ process.on('uncaughtException', (err) => {
 
 // ---------- Bot başlat ----------
 
-client.login(config.token);
+client.login(process.env.token);
+
 
