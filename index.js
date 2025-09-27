@@ -504,8 +504,6 @@ process.on('uncaughtException', (err) => {
 });
 
 // ---------- Bot başlat ----------
-if (!process.env.DISCORD_TOKEN) {
-  console.error('.env içinde DISCORD_TOKEN yok.');
-  process.exit(1);
-}
-client.login(process.env.DISCORD_TOKEN);
+
+client.login(config.token);
+
