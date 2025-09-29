@@ -247,6 +247,7 @@ function getPackDetails2(packValue) {
         { name: 'Özellikler', value: 'Fps Boost, DuraPack, Custom Crosshair' },
         { name: 'İndirme Linki', value: '[Tıklayın](https://www.mediafire.com/file/2dmk6hk8wq847hc/GodFather0.1.zip/file)' }
       ],
+      image: 'https://cdn.discordapp.com/attachments/1404774897284026425/1422224394733748254/2025-09-29_17.10.54.png?ex=68dbe52f&is=68da93af&hm=21101d5e1a2cf3c1531aede84c9495b2166e7aa57487bd2e1c957669d28f2a75&',
       thumbnail: 'https://cdn.discordapp.com/attachments/1404774897284026425/1421950750283534426/image.png'
     }
   };
@@ -616,3 +617,4 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 client.login(process.env.token);
+
