@@ -34,7 +34,7 @@ const client = new Client({
   ]
 });
 client.commands = new Collection();
-client.config = config; // referans
+client.config = config;
 
 // ---------- LOGGER ENTEGRE ET ----------
 let logger = null;
@@ -44,28 +44,6 @@ try {
   console.log('Logger entegre edildi.');
 } catch (e) {
   console.warn('Logger yüklenemedi:', e?.message || e);
-}
-
-// ---------- sendLog (geri uyumluluk için yardımcı) ----------
-async function sendLogWrapper(opts) {
-  try {
-    if (client.logger && typeof client.logger.info === 'function') {
-      // warn/info seçimi: opts.color ile belirleyebiliriz; default info
-      const title = opts.title || 'Log';
-      const desc = opts.description || '';
-      const fields = opts.fields || [];
-      if (opts.color && Number(opts.color) === 0xED4245) {
-        await client.logger.warn(title, desc, { fields, footer: opts.footer, thumbnail: opts.image });
-      } else {
-        await client.logger.info(title, desc, { fields, footer: opts.footer, thumbnail: opts.image });
-      }
-    } else {
-      // fallback: konsola bas
-      console.log('LOG:', opts.title, opts.description);
-    }
-  } catch (e) {
-    console.warn('sendLogWrapper hata:', e?.message || e);
-  }
 }
 
 // ---------- FONT (opsiyonel) ----------
@@ -96,7 +74,7 @@ async function createMemberCanvas(member) {
   try { bgImage = await Canvas.loadImage(bgPath); } catch (e) { bgImage = null; }
 
   const width = bgImage ? bgImage.width : 900;
-  const height = bgImage ? bgImage.height : 260;
+  const height = bgImage ? bgImage.height : 300; // Yüksekliği biraz artırdım
 
   const canvas = Canvas.createCanvas(width, height);
   const ctx = canvas.getContext('2d');
@@ -110,8 +88,9 @@ async function createMemberCanvas(member) {
     ctx.fillRect(0, 0, width, height);
   }
 
-  const avatarSize = Math.round(Math.min(height * 0.7, 180));
-  const avatarX = 30;
+  // Avatar bölümü
+  const avatarSize = Math.round(Math.min(height * 0.6, 160));
+  const avatarX = 50;
   const avatarY = Math.round((height / 2) - (avatarSize / 2));
   let avatarImg = null;
   try {
@@ -139,30 +118,139 @@ async function createMemberCanvas(member) {
     ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
   }
 
-  const fontFamily = (fs.existsSync(path.join(__dirname, 'fonts', 'MedievalSharp-Regular.ttf')) ? 'MedievalSharp' : 'Sans');
-  const nameX = Math.round(width / 2);
-  const nameY = Math.round(height / 2 + avatarSize / 8);
-  const nameMaxWidth = Math.round(width - 160);
+  // Metin bölümü - Düzeltilmiş
+  const fontFamily = 'MedievalSharp, Arial, Sans';
+  const textStartX = avatarX + avatarSize + 40;
+  
+  // Hoşgeldin mesajı
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 24px ' + fontFamily;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('Eyyubi 1/16', textStartX, 80);
+  
+  // Kullanıcı adı
+  ctx.font = 'bold 36px ' + fontFamily;
+  ctx.fillStyle = '#ffffff';
+  
+  // Kullanıcı adını uygun boyutta sığdır
+  const username = member.user.username;
+  let usernameFontSize = 36;
+  let usernameWidth;
+  
+  do {
+    ctx.font = `bold ${usernameFontSize}px ${fontFamily}`;
+    usernameWidth = ctx.measureText(username).width;
+    if (usernameWidth > (width - textStartX - 50)) {
+      usernameFontSize -= 2;
+    } else {
+      break;
+    }
+  } while (usernameFontSize > 20);
+  
+  ctx.fillText(username, textStartX, 130);
 
-  ctx.textAlign = 'center';
-  ctx.font = fitText(ctx, member.user.username, nameMaxWidth, 48, fontFamily);
-
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = '#ffffff';
-  ctx.strokeText(member.user.username, nameX, nameY);
-
-  ctx.fillStyle = '#000000';
-  ctx.fillText(member.user.username, nameX, nameY);
-
+  // Alt bilgi - Tarih ve Üye sayısı
   try {
     const memberCount = member.guild.memberCount;
-    ctx.font = '16px Sans';
-    ctx.fillStyle = '#222222';
-    ctx.fillText(`Üye • #${memberCount}`, nameX, height - 18);
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('tr-TR');
+    
+    ctx.font = '18px ' + fontFamily;
+    ctx.fillStyle = '#cccccc';
+    ctx.fillText(`Üye • #${memberCount}`, textStartX, height - 40);
+    
+    ctx.textAlign = 'right';
+    ctx.fillText(dateStr, width - 50, height - 40);
   } catch (e) {}
 
-  return new AttachmentBuilder(canvas.toBuffer(), { name: `member.png` });
+  return new AttachmentBuilder(canvas.toBuffer(), { name: `welcome.png` });
+}
+
+// ---------- PACK EMBED FONKSİYONLARI ----------
+function createPackEmbed1() {
+  return new EmbedBuilder()
+    .setTitle('Original Eyyubi Packs')
+    .setDescription('Aşağıdaki menüden bir texturepack seçin ve detayları özel mesaj olarak alın!')
+    .setColor(0x00AEFF)
+    .setImage('https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&')
+    .setFooter({ text: 'Kalite ve Performans Bir Arada' });
+}
+
+function createPackEmbed2() {
+  return new EmbedBuilder()
+    .setTitle('⚡ Consept Eyyubi Packs')
+    .setDescription('Consept texturepacklerimizi keşfedin! Menüden seçim yapın.')
+    .setColor(0xFFD700)
+    .setImage('https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&')
+    .setFooter({ text: 'Premium Deneyim' });
+}
+
+function createPackMenu1() {
+  return new StringSelectMenuBuilder()
+    .setCustomId('texturepack_menu_1')
+    .setPlaceholder('Originals - Pack seçin')
+    .addOptions(
+      { 
+        label: 'Eyyubi Pack', 
+        value: 'eyyubi_pack', 
+        description: 'Orijinal Eyyubi PvP Packi',
+        emoji: '🛡️'
+      }
+    );
+}
+
+function createPackMenu2() {
+  return new StringSelectMenuBuilder()
+    .setCustomId('texturepack_menu_2')
+    .setPlaceholder('Consept - Pack seçin')
+    .addOptions(
+      { 
+        label: 'Godfather Pack', 
+        value: 'godfather_pack', 
+        description: 'Godfather Temalı PvP pack',
+        emoji: '🎩'
+      }
+    );
+}
+
+// ---------- PACK DETAY EMBED FONKSİYONLARI ----------
+function getPackDetails1(packValue) {
+  const packs = {
+    'eyyubi_pack': {
+      title: 'Eyyubi Pack',
+      description: 'Orijinal Eyyubi PvP Pack - En iyi PvP deneyimi için optimize edilmiş',
+      color: 0x000000,
+      fields: [
+        { name: 'TexturePack Boyutu', value: 'x16', inline: true },
+        { name: 'Sürüm', value: 'Beta 0.1', inline: true },
+        { name: 'Uygun Sürümler', value: '+1.9.2', inline: true },
+        { name: 'Özellikler', value: 'FPS Boost, Clear Texture, PvP Optimized' },
+        { name: 'İndirme Linki', value: '[Tıklayın](https://www.mediafire.com/file/r6605hu807ckan7/Eyyubi_Pack.zip/file)' }
+      ],
+      image: 'https://cdn.discordapp.com/attachments/1404774897284026425/1421548626718490624/image.png',
+      thumbnail: 'https://cdn.discordapp.com/attachments/1404774897284026425/1421588661518205038/eyubi.png'
+    }
+  };
+  return packs[packValue] || null;
+}
+
+function getPackDetails2(packValue) {
+  const packs = {
+    'godfather_pack': {
+      title: 'Godfather Pack',
+      description: 'Godfather temalı FPS boost texturepack',
+      color: 0x000000,
+      fields: [
+        { name: 'TexturePack Boyutu', value: 'x32-x16', inline: true },
+        { name: 'Sürüm', value: 'Beta 1.0', inline: true },
+        { name: 'Uygun Sürümler', value: '+1.9+', inline: true },
+        { name: 'Özellikler', value: 'Fps Boost, DuraPack, Custom Crosshair' },
+        { name: 'İndirme Linki', value: '[Tıklayın](https://www.mediafire.com/file/2dmk6hk8wq847hc/GodFather0.1.zip/file)' }
+      ],
+      thumbnail: 'https://cdn.discordapp.com/attachments/1404774897284026425/1421950750283534426/image.png'
+    }
+  };
+  return packs[packValue] || null;
 }
 
 // ---------- GUILD MEMBER EVENTS ----------
@@ -170,7 +258,6 @@ client.on('guildMemberAdd', async (member) => {
   try {
     if (ALLOWED_GUILD_ID && member.guild.id !== ALLOWED_GUILD_ID) return;
 
-    // Otorol
     const autoRoleId = client.config.autoRoleId || client.config.joinRoleId || null;
     if (autoRoleId) {
       try {
@@ -186,7 +273,11 @@ client.on('guildMemberAdd', async (member) => {
     if (!channel) return;
 
     const attachment = await createMemberCanvas(member);
-    await channel.send({ content: `🎉 Aramıza hoşgeldin <@${member.id}>!`, files: [attachment] }).catch(() => {});
+    await channel.send({ 
+      content: `🎉 Aramıza hoşgeldin <@${member.id}>!`, 
+      files: [attachment] 
+    }).catch(() => {});
+    
     if (client.logger) client.logger.info('Üye Katıldı', `${member.user.tag} katıldı.`, { thumbnail: member.user.displayAvatarURL() });
   } catch (err) {
     console.error('guildMemberAdd hatası:', err);
@@ -203,7 +294,11 @@ client.on('guildMemberRemove', async (member) => {
     if (!channel) return;
 
     const attachment = await createMemberCanvas(member);
-    await channel.send({ content: `😢 Görüşürüz <@${member.id}>!`, files: [attachment] }).catch(() => {});
+    await channel.send({ 
+      content: `😢 Görüşürüz <@${member.id}>!`, 
+      files: [attachment] 
+    }).catch(() => {});
+    
     if (client.logger) client.logger.info('Üye Ayrıldı', `${member.user.tag} ayrıldı.`, { thumbnail: member.user.displayAvatarURL() });
   } catch (err) {
     console.error('guildMemberRemove hatası:', err);
@@ -239,7 +334,7 @@ client.once('ready', () => {
   if (client.logger) client.logger.info('Bot Başlatıldı', `Kullanıcı: ${client.user.tag}`);
 });
 
-// ---------- messageCreate (reklam engelleme eklendi) ----------
+// ---------- messageCreate (reklam engelleme ve pack menüleri) ----------
 client.on('messageCreate', async (msg) => {
   try {
     if (msg.author?.bot) return;
@@ -277,10 +372,8 @@ client.on('messageCreate', async (msg) => {
 
       if (hasAd && !isBypass) {
         const shortContent = (msg.content && msg.content.length > 1000) ? msg.content.slice(0,1000) + '...' : (msg.content || '[Ek içerik]');
-
         try { await msg.delete(); } catch (e) {}
 
-        // Kullanıcıya DM ile embed uyarı gönder
         const dmEmbed = new EmbedBuilder()
           .setTitle('Uyarı: Silinen Mesaj (Reklam/İzinsiz Link)')
           .setDescription(`Merhaba **${msg.author.username}**, gönderdiğiniz mesaj sunucu kuralları gereği silinmiştir.`)
@@ -293,50 +386,33 @@ client.on('messageCreate', async (msg) => {
           .setTimestamp()
           .setFooter({ text: 'Lütfen kurallara uyun veya moderatörlere başvurun.' });
 
-        try { await msg.author.send({ embeds: [dmEmbed] }); } catch (e) { /* DM kapalıysa atla */ }
-
-        // Logger'a bildir
-        try {
-          if (client.logger) {
-            await client.logger.warn('Reklam Engellendi', `Kullanıcı: ${msg.author.tag} - Kanal: ${msg.channel.name || msg.channel.id}`, { fields: [{ name: 'Mesaj (kısa)', value: shortContent }] });
-          } else {
-            await sendLogWrapper({
-              title: 'Reklam Engellendi',
-              description: `Bir mesaj reklam/izinsiz link nedeniyle silindi.`,
-              fields: [
-                { name: 'Kullanıcı', value: `${msg.author.tag} (${msg.author.id})`, inline: true },
-                { name: 'Kanal', value: `${msg.channel.name || msg.channel.id}`, inline: true },
-                { name: 'Mesaj (kısa)', value: shortContent }
-              ],
-              color: 0xED4245
-            });
-          }
-        } catch (e) { console.warn('Reklam log hatası:', e?.message || e); }
-
+        try { await msg.author.send({ embeds: [dmEmbed] }); } catch (e) { }
+        if (client.logger) await client.logger.warn('Reklam Engellendi', `Kullanıcı: ${msg.author.tag} - Kanal: ${msg.channel.name || msg.channel.id}`, { fields: [{ name: 'Mesaj (kısa)', value: shortContent }] });
         return;
       }
     }
 
-    // ---------- packspacks3131 menüsü ----------
-    if (msg.content.toLowerCase() === 'packspacks3131') {
-      const embed = new EmbedBuilder()
-        .setTitle('Eyyubi Texturepack Menüsü')
-        .setDescription('Aşağıdaki menüden bir pack seçin ve bilgileri özel mesaj olarak görün!')
-        .setColor(0x00AEFF)
-        .setImage('https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&')
-        .setFooter({ text: 'Piyasada Tek.' });
-      const menu = new StringSelectMenuBuilder()
-        .setCustomId('texturepack_menu')
-        .setPlaceholder('Bir texturepack seçin')
-        .addOptions(
-          { label: 'Eyyubi Pack', value: 'eyyubi', description: 'Orijinal Eyyubi PvP Packi.' }
-        );
+    // ---------- PACK MENÜ TETİKLEYİCİLERİ ----------
+    const content = msg.content.toLowerCase();
 
+    // Koleksiyon 1 Tetikleyicileri
+    const triggers1 = ['packspacks3131', '!pack', '!texture', '!packs', 'packmenu', 'texturemenu'];
+    if (triggers1.includes(content)) {
+      const embed = createPackEmbed1();
+      const menu = createPackMenu1();
       const row = new ActionRowBuilder().addComponents(menu);
       await msg.channel.send({ embeds: [embed], components: [row] }).catch(() => {});
     }
 
-    // diğer messageCreate mantıkları buraya...
+    // Koleksiyon 2 Tetikleyicileri
+    const triggers2 = ['packal', '!premium', '!pack2', '!elitepack', 'premiummenu', 'elitemenu'];
+    if (triggers2.includes(content)) {
+      const embed = createPackEmbed2();
+      const menu = createPackMenu2();
+      const row = new ActionRowBuilder().addComponents(menu);
+      await msg.channel.send({ embeds: [embed], components: [row] }).catch(() => {});
+    }
+
   } catch (err) {
     console.error('messageCreate handler hatası:', err);
     if (client.logger) client.logger.interactionError({ user: msg.author, commandName: 'messageCreate' }, err);
@@ -346,32 +422,61 @@ client.on('messageCreate', async (msg) => {
 // ---------- interactionCreate ----------
 client.on('interactionCreate', async (interaction) => {
   try {
-    // Select menu (texturepack)
-    if (interaction.isStringSelectMenu() && interaction.customId === 'texturepack_menu') {
-      const value = interaction.values[0];
-      let packEmbed;
-      if (value === 'eyyubi') {
-        packEmbed = new EmbedBuilder()
-          .setTitle('Eyyubi Packs')
-          .setDescription('Orijinal Eyyubi PvP Pack.')
-          .addFields(
-    { name: '\u200B', value: '\u200B' },
-		{ name: 'TexturePack Boyutu', value: 'x16' },
-		{ name: '\u200B', value: '\u200B' },
-		{ name: 'Sürüm', value: 'Beta 0.1', inline: true },
-		{ name: 'Uygun Sürümler', value: '+1.9.2', inline: true },
-	)
-          .addFields(
-            { name: '\u200B', value: '\u200B' },
-            { name: 'İndirmek İçin', value: '[Tıklayın](https://cdn.discordapp.com/attachments/1404774897284026425/1421585201779179560/Eyyubi_Pack.zip?ex=68d991e3&is=68d84063&hm=d1e49fec51122b96445d9b3f90d5189474bb16aefe03fd9fa50b84d01f50c386&)' , inline: true })
-          .setColor(0x000000)
-          .setImage('https://cdn.discordapp.com/attachments/1404774897284026425/1421548626718490624/image.png?ex=68d96fd3&is=68d81e53&hm=d449dc3564a58dfafa43677d1332e72a41a517a3403ec8d452f84a157f19c77b&')
-          .setThumbnail('https://cdn.discordapp.com/attachments/1404774897284026425/1421588661518205038/eyubi.png?ex=68d9951c&is=68d8439c&hm=f38f194e903dfa50adcf606682e0f7be40260e63decac1e85a1112d804555c43&')
-          .setFooter({ text: 'FPS Booster' });
-      } else {
-        packEmbed = new EmbedBuilder().setTitle('Bilinmeyen').setDescription('Geçersiz seçenek').setColor(0xff0000);
+    // Select menu interactions
+    if (interaction.isStringSelectMenu()) {
+      
+      // Koleksiyon 1 Menüsü
+      if (interaction.customId === 'texturepack_menu_1') {
+        const value = interaction.values[0];
+        const packDetails = getPackDetails1(value);
+        
+        if (packDetails) {
+          const packEmbed = new EmbedBuilder()
+            .setTitle(packDetails.title)
+            .setDescription(packDetails.description)
+            .setColor(packDetails.color)
+            .addFields(packDetails.fields);
+
+          if (packDetails.image) packEmbed.setImage(packDetails.image);
+          if (packDetails.thumbnail) packEmbed.setThumbnail(packDetails.thumbnail);
+          
+          packEmbed.setFooter({ text: 'Eyyubi FPS Booster • Kaliteli Oyun Deneyimi' });
+          
+          return interaction.reply({ embeds: [packEmbed], ephemeral: true }).catch(() => {});
+        } else {
+          const errorEmbed = new EmbedBuilder()
+            .setTitle('Hata')
+            .setDescription('Seçilen pack bulunamadı.')
+            .setColor(0xff0000);
+          return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        }
       }
-      return interaction.reply({ embeds: [packEmbed], ephemeral: true }).catch(() => {});
+
+      // Koleksiyon 2 Menüsü
+      if (interaction.customId === 'texturepack_menu_2') {
+        const value = interaction.values[0];
+        const packDetails = getPackDetails2(value);
+        
+        if (packDetails) {
+          const packEmbed = new EmbedBuilder()
+            .setTitle(packDetails.title)
+            .setDescription(packDetails.description)
+            .setColor(packDetails.color)
+            .addFields(packDetails.fields)
+            .setFooter({ text: 'Eyyubi Consept Packs' });
+
+          if (packDetails.image) packEmbed.setImage(packDetails.image);
+          if (packDetails.thumbnail) packEmbed.setThumbnail(packDetails.thumbnail);
+          
+          return interaction.reply({ embeds: [packEmbed], ephemeral: true }).catch(() => {});
+        } else {
+          const errorEmbed = new EmbedBuilder()
+            .setTitle('Hata')
+            .setDescription('Seçilen pack bulunamadı.')
+            .setColor(0xff0000);
+          return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        }
+      }
     }
 
     // Button interactions (ticket)
@@ -487,6 +592,7 @@ client.on('messageDelete', async (message) => {
     if (client.logger) await client.logger.messageDelete(message);
   } catch (e) { console.warn('messageDelete logger hatası:', e); }
 });
+
 client.on('messageUpdate', async (oldMsg, newMsg) => {
   try {
     if (client.logger) await client.logger.messageEdit(oldMsg, newMsg);
@@ -498,13 +604,15 @@ process.on('unhandledRejection', (reason, p) => {
   console.error('Unhandled Rejection at:', p, 'reason:', reason);
   if (client.logger) client.logger.processError('UNHANDLED_REJECTION', reason);
 });
+
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
   if (client.logger) client.logger.processError('UNCAUGHT_EXCEPTION', err);
 });
 
 // ---------- Bot başlat ----------
-
+if (!process.env.DISCORD_TOKEN) {
+  console.error('.env içinde DISCORD_TOKEN yok.');
+  process.exit(1);
+}
 client.login(process.env.token);
-
-
