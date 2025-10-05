@@ -194,7 +194,7 @@ module.exports = {
 
             // Embed oluştur
             const shareEmbed = new EmbedBuilder()
-                .setTitle(packConfig.title)
+                .setTitle(`${packConfig.title} - ${packAdi}`)
                 .setDescription(aciklama)
                 .setColor(packConfig.color)
                 .addFields(
@@ -265,6 +265,7 @@ module.exports = {
                     // PAYLAŞIM ONAYLANDI
                     const messageContent = roleMention ? 
                         `${roleMention}\nYeni pack paylaşıldı! 🎉` : 
+                        'Yeni pack paylaşıldı! 🎉';
 
                     await targetChannel.send({ 
                         content: messageContent,
