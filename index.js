@@ -1,4 +1,4 @@
-// index.js — Tam entegre (logger, reklam engel, canvas, ticket, pack menü, komut loader)
+// index.js — Tam entegre (logger, reklam engel, canvas, ticket, pack menü, komut loader, butonlu rol)
 const fs = require('fs');
 const path = require('path');
 const Canvas = require('canvas');
@@ -46,124 +46,145 @@ try {
   console.warn('Logger yüklenemedi:', e?.message || e);
 }
 
-// ---------- FONT (opsiyonel) ----------
-try {
-  const fontPath = path.join(__dirname, 'fonts', 'MedievalSharp-Regular.ttf');
-  if (fs.existsSync(fontPath)) {
-    Canvas.registerFont(fontPath, { family: 'MedievalSharp' });
-    console.log('Özel font yüklendi: MedievalSharp');
-  }
-} catch (e) {
-  console.warn('Font yüklemede hata:', e.message);
+// ---------- ROL SİSTEMİ FONKSİYONLARI ----------
+function createRoleButtons() {
+    return [
+        new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('role_net')
+                    .setLabel('NethPot')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🛡️'),
+                new ButtonBuilder()
+                    .setCustomId('role_dura')
+                    .setLabel('DuraPack Rolü')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🛡️')
+            ),
+        new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('role_uhc')
+                    .setLabel('UHCPack Rolü')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('🏹'),
+                new ButtonBuilder()
+                    .setCustomId('role_diapot')
+                    .setLabel('Diapot Rolü')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('💎'),
+                new ButtonBuilder()
+                    .setCustomId('role_smp')
+                    .setLabel('SMP Pack Rolü')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('🌳'),
+                new ButtonBuilder()
+                    .setCustomId('role_helpful')
+                    .setLabel('Helpful Pack Rolü')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🌟')
+            ),
+        new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('role_temizle')
+                    .setLabel('Tüm Rolleri Temizle')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('🧹')
+            )
+    ];
 }
 
-// ---------- CANVAS HELPERS ----------
-function fitText(ctx, text, maxWidth, startingSize = 48, fontFamily = 'Sans') {
-  let fontSize = startingSize;
-  do {
-    ctx.font = `bold ${fontSize}px ${fontFamily}`;
-    if (ctx.measureText(text).width <= maxWidth) break;
-    fontSize -= 2;
-  } while (fontSize > 10);
-  return ctx.font;
+function createRoleEmbed() {
+    return new EmbedBuilder()
+        .setTitle('🎯 Pack Bildirim Rolleri')
+        .setDescription('Aşağıdaki butonlara tıklayarak istediğiniz pack kategorilerinin bildirim rollerini alabilirsiniz!\n\n**Mevcut Pack Kategorileri:**\n🛡️ Eyyubi Pack - Orijinal packlerimiz\n⭐ Premium Pack - Özel packler\n🎮 Oyuncu Pack - Topluluk packleri\n🛡️ DuraPack - Dayanıklılık packleri\n🏹 UHC Pack - UHC modu packleri\n💎 Diapot Pack - Elmas temalı packler\n🌳 SMP Pack - SMP modu packleri\n🌟 Helpful Pack - Yardımcı packler')
+        .setColor(0x00AE86)
+        .setImage('https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&')
+        .addFields(
+            { name: '📢 Nasıl Çalışır?', value: 'Butona tıklayarak rolü alırsınız, tekrar tıklayarak çıkarırsınız. Her yeni pack paylaşımında ilgili rol etiketlenecektir.' },
+            { name: '🧹 Temizleme', value: 'Tüm pack rollerinizi temizlemek için "Tüm Rolleri Temizle" butonunu kullanın.' }
+        )
+        .setFooter({ text: 'İstediğiniz pack kategorilerinin bildirimlerini almak için butonlara tıklayın!' });
 }
 
-async function createMemberCanvas(member) {
-  const bgPath = path.join(__dirname, 'arkaplaneyy.png');
-  let bgImage = null;
-  try { bgImage = await Canvas.loadImage(bgPath); } catch (e) { bgImage = null; }
-
-  const width = bgImage ? bgImage.width : 900;
-  const height = bgImage ? bgImage.height : 300; // Yüksekliği biraz artırdım
-
-  const canvas = Canvas.createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
-
-  if (bgImage) ctx.drawImage(bgImage, 0, 0, width, height);
-  else {
-    const g = ctx.createLinearGradient(0, 0, width, height);
-    g.addColorStop(0, '#1f2937');
-    g.addColorStop(1, '#111827');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, width, height);
-  }
-
-  // Avatar bölümü
-  const avatarSize = Math.round(Math.min(height * 0.6, 160));
-  const avatarX = 50;
-  const avatarY = Math.round((height / 2) - (avatarSize / 2));
-  let avatarImg = null;
+// ---------- CANVAS FONKSİYONLARI ----------
+async function createWelcomeCanvas(member, isWelcome = true) {
   try {
-    avatarImg = await Canvas.loadImage(member.user.displayAvatarURL({ extension: 'png', size: 1024 }));
-  } catch (e) { avatarImg = null; }
-
-  if (avatarImg) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 + 8, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
-    ctx.restore();
-  } else {
-    ctx.fillStyle = '#cccccc';
-    ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
-  }
-
-  // Metin bölümü - Düzeltilmiş
-  const fontFamily = 'MedievalSharp, Arial, Sans';
-  const textStartX = avatarX + avatarSize + 40;
-  
-  // Hoşgeldin mesajı
-  ctx.textAlign = 'left';
-  ctx.font = 'bold 24px ' + fontFamily;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('Eyyubi 1/16', textStartX, 80);
-  
-  // Kullanıcı adı
-  ctx.font = 'bold 36px ' + fontFamily;
-  ctx.fillStyle = '#ffffff';
-  
-  // Kullanıcı adını uygun boyutta sığdır
-  const username = member.user.username;
-  let usernameFontSize = 36;
-  let usernameWidth;
-  
-  do {
-    ctx.font = `bold ${usernameFontSize}px ${fontFamily}`;
-    usernameWidth = ctx.measureText(username).width;
-    if (usernameWidth > (width - textStartX - 50)) {
-      usernameFontSize -= 2;
-    } else {
-      break;
+    // Font Yükleme
+    try {
+      Canvas.registerFont("./fonts/MedievalSharp-Regular.ttf", { family: "MedievalSharp" });
+    } catch (e) {
+      console.warn("⚠️ MedievalSharp fontu bulunamadı, varsayılan font kullanılacak.");
     }
-  } while (usernameFontSize > 20);
-  
-  ctx.fillText(username, textStartX, 130);
 
-  // Alt bilgi - Tarih ve Üye sayısı
-  try {
-    const memberCount = member.guild.memberCount;
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('tr-TR');
-    
-    ctx.font = '18px ' + fontFamily;
-    ctx.fillStyle = '#cccccc';
-    ctx.fillText(`Üye • #${memberCount}`, textStartX, height - 40);
-    
-    ctx.textAlign = 'right';
-    ctx.fillText(dateStr, width - 50, height - 40);
-  } catch (e) {}
+    const width = 734;
+    const height = 293;
+    const canvas = Canvas.createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
 
-  return new AttachmentBuilder(canvas.toBuffer(), { name: `welcome.png` });
+    // Arka plan yükleme
+    let background;
+    try {
+      background = await Canvas.loadImage("hgbb3.png");
+    } catch (e) {
+      // Eğer hgbb3.png bulunamazsa, basit bir arka plan oluştur
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(0, 0, width, height);
+      console.warn("⚠️ hgbb3.png bulunamadı, varsayılan arkaplan kullanılıyor.");
+    }
+
+    if (background) {
+      ctx.drawImage(background, 0, 0, width, height);
+    }
+
+    // Metin ayarları
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FFFFFF";
+    
+    // Başlık metni
+    ctx.font = "bold 36px MedievalSharp, Sans";
+    ctx.fillText(isWelcome ? "Hoş geldin!" : "Görüşürüz!", width / 2, 50);
+
+    // Avatar
+    const avatarSize = 130;
+    const avatarX = width / 2 - avatarSize / 2;
+    const avatarY = 80;
+    
+    let avatar;
+    try {
+      avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: "png", size: 512 }));
+    } catch (e) {
+      console.warn("⚠️ Avatar yüklenemedi:", e.message);
+      // Avatar yüklenemezse basit bir daire çiz
+      ctx.fillStyle = '#cccccc';
+      ctx.beginPath();
+      ctx.arc(width / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (avatar) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(width / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
+      ctx.restore();
+    }
+
+    // Kullanıcı adı
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 28px MedievalSharp, Sans";
+    ctx.fillText(member.user.username, width / 2, 260);
+
+    return new AttachmentBuilder(canvas.toBuffer(), { name: isWelcome ? "welcome.png" : "goodbye.png" });
+
+  } catch (error) {
+    console.error('Canvas oluşturma hatası:', error);
+    throw error;
+  }
 }
 
 // ---------- PACK EMBED FONKSİYONLARI ----------
@@ -247,7 +268,6 @@ function getPackDetails2(packValue) {
         { name: 'Özellikler', value: 'Fps Boost, DuraPack, Custom Crosshair' },
         { name: 'İndirme Linki', value: '[Tıklayın](https://www.mediafire.com/file/2dmk6hk8wq847hc/GodFather0.1.zip/file)' }
       ],
-      image: 'https://cdn.discordapp.com/attachments/1404774897284026425/1422224394733748254/2025-09-29_17.10.54.png?ex=68dbe52f&is=68da93af&hm=21101d5e1a2cf3c1531aede84c9495b2166e7aa57487bd2e1c957669d28f2a75&',
       thumbnail: 'https://cdn.discordapp.com/attachments/1404774897284026425/1421950750283534426/image.png'
     }
   };
@@ -273,7 +293,7 @@ client.on('guildMemberAdd', async (member) => {
     const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
     if (!channel) return;
 
-    const attachment = await createMemberCanvas(member);
+    const attachment = await createWelcomeCanvas(member, true);
     await channel.send({ 
       content: `🎉 Aramıza hoşgeldin <@${member.id}>!`, 
       files: [attachment] 
@@ -294,7 +314,7 @@ client.on('guildMemberRemove', async (member) => {
     const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
     if (!channel) return;
 
-    const attachment = await createMemberCanvas(member);
+    const attachment = await createWelcomeCanvas(member, false);
     await channel.send({ 
       content: `😢 Görüşürüz <@${member.id}>!`, 
       files: [attachment] 
@@ -335,7 +355,7 @@ client.once('ready', () => {
   if (client.logger) client.logger.info('Bot Başlatıldı', `Kullanıcı: ${client.user.tag}`);
 });
 
-// ---------- messageCreate (reklam engelleme ve pack menüleri) ----------
+// ---------- messageCreate (reklam engelleme, pack menüleri ve rol komutu) ----------
 client.on('messageCreate', async (msg) => {
   try {
     if (msg.author?.bot) return;
@@ -393,9 +413,30 @@ client.on('messageCreate', async (msg) => {
       }
     }
 
-    // ---------- PACK MENÜ TETİKLEYİCİLERİ ----------
     const content = msg.content.toLowerCase();
 
+    // ---------- ROL KOMUTU ----------
+    if (content === '!roller') {
+      // Yetki kontrolü - istersen kaldırabilirsin
+      if (!msg.member.permissions.has('Administrator')) {
+        return msg.reply({ 
+          content: '❌ Bu komutu sadece yöneticiler kullanabilir!', 
+          ephemeral: true 
+        }).catch(() => {});
+      }
+
+      const embed = createRoleEmbed();
+      const rows = createRoleButtons();
+      
+      await msg.channel.send({ 
+        embeds: [embed], 
+        components: rows 
+      });
+      await msg.delete().catch(() => {});
+      return;
+    }
+
+    // ---------- PACK MENÜ TETİKLEYİCİLERİ ----------
     // Koleksiyon 1 Tetikleyicileri
     const triggers1 = ['packspacks3131', '!pack', '!texture', '!packs', 'packmenu', 'texturemenu'];
     if (triggers1.includes(content)) {
@@ -423,65 +464,103 @@ client.on('messageCreate', async (msg) => {
 // ---------- interactionCreate ----------
 client.on('interactionCreate', async (interaction) => {
   try {
-    // Select menu interactions
-    if (interaction.isStringSelectMenu()) {
-      
-      // Koleksiyon 1 Menüsü
-      if (interaction.customId === 'texturepack_menu_1') {
-        const value = interaction.values[0];
-        const packDetails = getPackDetails1(value);
-        
-        if (packDetails) {
-          const packEmbed = new EmbedBuilder()
-            .setTitle(packDetails.title)
-            .setDescription(packDetails.description)
-            .setColor(packDetails.color)
-            .addFields(packDetails.fields);
-
-          if (packDetails.image) packEmbed.setImage(packDetails.image);
-          if (packDetails.thumbnail) packEmbed.setThumbnail(packDetails.thumbnail);
-          
-          packEmbed.setFooter({ text: 'Eyyubi FPS Booster • Kaliteli Oyun Deneyimi' });
-          
-          return interaction.reply({ embeds: [packEmbed], ephemeral: true }).catch(() => {});
-        } else {
-          const errorEmbed = new EmbedBuilder()
-            .setTitle('Hata')
-            .setDescription('Seçilen pack bulunamadı.')
-            .setColor(0xff0000);
-          return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-        }
-      }
-
-      // Koleksiyon 2 Menüsü
-      if (interaction.customId === 'texturepack_menu_2') {
-        const value = interaction.values[0];
-        const packDetails = getPackDetails2(value);
-        
-        if (packDetails) {
-          const packEmbed = new EmbedBuilder()
-            .setTitle(packDetails.title)
-            .setDescription(packDetails.description)
-            .setColor(packDetails.color)
-            .addFields(packDetails.fields)
-            .setFooter({ text: 'Eyyubi Consept Packs' });
-
-          if (packDetails.image) packEmbed.setImage(packDetails.image);
-          if (packDetails.thumbnail) packEmbed.setThumbnail(packDetails.thumbnail);
-          
-          return interaction.reply({ embeds: [packEmbed], ephemeral: true }).catch(() => {});
-        } else {
-          const errorEmbed = new EmbedBuilder()
-            .setTitle('Hata')
-            .setDescription('Seçilen pack bulunamadı.')
-            .setColor(0xff0000);
-          return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-        }
-      }
-    }
-
-    // Button interactions (ticket)
+    // ---------- BUTON INTERACTIONLARI ----------
     if (interaction.isButton()) {
+      const { customId, member, guild } = interaction;
+
+      // ---------- ROL BUTONLARI ----------
+      if (customId.startsWith('role_')) {
+        // ROL ID'LERİNİ BURAYA GİR - KENDİ SUNUCUNDAKİ ROL ID'LERİ İLE DEĞİŞTİR!
+        const roleIds = {
+          'role_net': '1424389981614637136',      // Eyyubi rol ID'si
+          'role_dura': '1424390222233210963',          // DuraPack rol ID'si
+          'role_uhc': '1424390579751485500',            // UHCPack rol ID'si
+          'role_diapot': '1424390055228870668',      // Diapot rol ID'si
+          'role_smp': '1424390177232781535',            // SMP Pack rol ID'si
+          'role_helpful': '1424390269767254197'     // Helpful Pack rol ID'si
+        };
+
+        await interaction.deferReply({ ephemeral: true });
+
+        // Rolleri temizle butonu
+        if (customId === 'role_temizle') {
+          let removedCount = 0;
+          
+          for (const roleKey in roleIds) {
+            const roleId = roleIds[roleKey];
+            const role = await guild.roles.fetch(roleId).catch(() => null);
+            
+            if (role && member.roles.cache.has(role.id)) {
+              await member.roles.remove(role).catch(() => {});
+              removedCount++;
+            }
+          }
+          
+          if (removedCount > 0) {
+            await interaction.editReply({ 
+              content: `✅ ${removedCount} adet pack rolü başarıyla kaldırıldı!` 
+            });
+          } else {
+            await interaction.editReply({ 
+              content: '❌ Zaten hiç pack rolünüz yok!' 
+            });
+          }
+          return;
+        }
+
+        // Rol ekleme/çıkarma butonları
+        const roleId = roleIds[customId];
+        if (!roleId || roleId.includes('BURAYA')) {
+          return interaction.editReply({ 
+            content: '❌ Rol IDleri ayarlanmamış! Lütfen bot sahibine bildirin.' 
+          });
+        }
+
+        const role = await guild.roles.fetch(roleId).catch(() => null);
+        if (!role) {
+          return interaction.editReply({ 
+            content: '❌ Rol bulunamadı! Lütfen yöneticilere bildirin.' 
+          });
+        }
+
+        // Rolü kontrol et ve işlem yap
+        if (member.roles.cache.has(role.id)) {
+          // Rolü çıkar
+          await member.roles.remove(role);
+          await interaction.editReply({ 
+            content: `✅ **${role.name}** rolü başarıyla kaldırıldı! Artık bu pack kategorisinden bildirim almayacaksınız.` 
+          });
+          
+          if (client.logger) {
+            client.logger.moderation({ 
+              action: 'ROL_KALDIRMA', 
+              moderator: client.user.tag, 
+              target: member.user.tag, 
+              reason: 'Buton ile rol kaldırma',
+              details: `Rol: ${role.name}`
+            });
+          }
+        } else {
+          // Rolü ekle
+          await member.roles.add(role);
+          await interaction.editReply({ 
+            content: `✅ **${role.name}** rolü başarıyla verildi! Artık bu pack kategorisinden bildirim alacaksınız. 🎉` 
+          });
+          
+          if (client.logger) {
+            client.logger.moderation({ 
+              action: 'ROL_VERME', 
+              moderator: client.user.tag, 
+              target: member.user.tag, 
+              reason: 'Buton ile rol verme',
+              details: `Rol: ${role.name}`
+            });
+          }
+        }
+        return;
+      }
+
+      // ---------- TICKET BUTONLARI ----------
       const id = interaction.customId;
       try { client.config = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (e) {}
 
@@ -564,7 +643,64 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
 
-    // Slash komut yönlendirme
+    // ---------- SELECT MENU INTERACTIONLARI ----------
+    if (interaction.isStringSelectMenu()) {
+      
+      // Koleksiyon 1 Menüsü
+      if (interaction.customId === 'texturepack_menu_1') {
+        const value = interaction.values[0];
+        const packDetails = getPackDetails1(value);
+        
+        if (packDetails) {
+          const packEmbed = new EmbedBuilder()
+            .setTitle(packDetails.title)
+            .setDescription(packDetails.description)
+            .setColor(packDetails.color)
+            .addFields(packDetails.fields);
+
+          if (packDetails.image) packEmbed.setImage(packDetails.image);
+          if (packDetails.thumbnail) packEmbed.setThumbnail(packDetails.thumbnail);
+          
+          packEmbed.setFooter({ text: 'Eyyubi FPS Booster • Kaliteli Oyun Deneyimi' });
+          
+          return interaction.reply({ embeds: [packEmbed], ephemeral: true }).catch(() => {});
+        } else {
+          const errorEmbed = new EmbedBuilder()
+            .setTitle('Hata')
+            .setDescription('Seçilen pack bulunamadı.')
+            .setColor(0xff0000);
+          return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        }
+      }
+
+      // Koleksiyon 2 Menüsü
+      if (interaction.customId === 'texturepack_menu_2') {
+        const value = interaction.values[0];
+        const packDetails = getPackDetails2(value);
+        
+        if (packDetails) {
+          const packEmbed = new EmbedBuilder()
+            .setTitle(packDetails.title)
+            .setDescription(packDetails.description)
+            .setColor(packDetails.color)
+            .addFields(packDetails.fields)
+            .setFooter({ text: 'Eyyubi Consept Packs' });
+
+          if (packDetails.image) packEmbed.setImage(packDetails.image);
+          if (packDetails.thumbnail) packEmbed.setThumbnail(packDetails.thumbnail);
+          
+          return interaction.reply({ embeds: [packEmbed], ephemeral: true }).catch(() => {});
+        } else {
+          const errorEmbed = new EmbedBuilder()
+            .setTitle('Hata')
+            .setDescription('Seçilen pack bulunamadı.')
+            .setColor(0xff0000);
+          return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        }
+      }
+    }
+
+    // ---------- SLASH KOMUT YÖNLENDİRME ----------
     if (interaction.isCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
@@ -616,5 +752,4 @@ if (!process.env.DISCORD_TOKEN) {
   console.error('.env içinde DISCORD_TOKEN yok.');
   process.exit(1);
 }
-client.login(process.env.token);
-
+client.login(process.env.DISCORD_TOKEN);
