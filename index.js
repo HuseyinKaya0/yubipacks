@@ -747,9 +747,65 @@ process.on('uncaughtException', (err) => {
   if (client.logger) client.logger.processError('UNCAUGHT_EXCEPTION', err);
 });
 
+// ---------- Otomatik Komut Deploy ----------
+async function deployCommands() {
+    try {
+        const { REST, Routes } = require('discord.js');
+        const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+        const commands = [];
+        const commandsPath = path.join(__dirname, 'commands');
+        
+        if (!fs.existsSync(commandsPath)) {
+            console.log('❌ Commands klasörü bulunamadı!');
+            return;
+        }
+
+        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            const command = require(filePath);
+            
+            if ('data' in command && 'execute' in command) {
+                commands.push(command.data.toJSON());
+            }
+        }
+
+        if (commands.length > 0) {
+            console.log(`🔄 ${commands.length} komut deploy ediliyor...`);
+            
+            const data = await rest.put(
+                Routes.applicationCommands(process.env.CLIENT_ID),
+                { body: commands },
+            );
+
+            console.log(`✅ ${data.length} komut başarıyla deploy edildi!`);
+        } else {
+            console.log('ℹ️  Deploy edilecek komut bulunamadı.');
+        }
+    } catch (error) {
+        console.error('❌ Otomatik komut deploy hatası:', error.message);
+        // Hata olsa da bot çalışmaya devam etsin
+    }
+}
+
+// Bot başlamadan önce komutları deploy et
+deployCommands().then(() => {
+    console.log('🚀 Bot başlatılıyor...');
+});
+
+// ---------- Bot başlat ----------
+if (!process.env.DISCORD_TOKEN) {
+    console.error('❌ .env içinde DISCORD_TOKEN yok.');
+    process.exit(1);
+}
+
+client.login(process.env.DISCORD_TOKEN);
 // ---------- Bot başlat ----------
 if (!process.env.DISCORD_TOKEN) {
   console.error('.env içinde DISCORD_TOKEN yok.');
   process.exit(1);
 }
 client.login(process.env.DISCORD_TOKEN);
+
