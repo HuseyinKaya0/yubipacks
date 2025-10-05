@@ -135,8 +135,8 @@ function createWelcomeEmbed(member, isWelcome = true) {
             }
         )
         .setImage(isWelcome 
-            ? 'https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&'
-            : 'https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&'
+            ? 'https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68e378ed&is=68e2276d&hm=b4bc046e712c32a282e8c0c968e11c6cc5d0c54a9f62e8559fd2a8622d467b35&'
+            : 'https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68e378ed&is=68e2276d&hm=b4bc046e712c32a282e8c0c968e11c6cc5d0c54a9f62e8559fd2a8622d467b35&'
         )
         .setFooter({ 
             text: isWelcome 
@@ -715,3 +715,4 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 client.login(process.env.DISCORD_TOKEN);
+
