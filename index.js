@@ -1,7 +1,6 @@
-// index.js — Tam entegre (logger, reklam engel, canvas, ticket, pack menü, komut loader, butonlu rol)
+// index.js — Güncellenmiş versiyon (canvas kaldırıldı, embed'li hoş geldin eklendi)
 const fs = require('fs');
 const path = require('path');
-const Canvas = require('canvas');
 require('dotenv').config();
 
 const {
@@ -14,7 +13,6 @@ const {
   ButtonStyle,
   StringSelectMenuBuilder,
   ChannelType,
-  AttachmentBuilder,
   PermissionFlagsBits
 } = require('discord.js');
 
@@ -109,59 +107,47 @@ function createRoleEmbed() {
         .setFooter({ text: 'İstediğiniz pack kategorilerinin bildirimlerini almak için butonlara tıklayın!' });
 }
 
-// ---------- GUILD MEMBER EVENTS ----------
-client.on('guildMemberAdd', async (member) => {
-  try {
-    if (ALLOWED_GUILD_ID && member.guild.id !== ALLOWED_GUILD_ID) return;
-
-    const autoRoleId = client.config.autoRoleId || client.config.joinRoleId || null;
-    if (autoRoleId) {
-      try {
-        const role = await member.guild.roles.fetch(autoRoleId).catch(() => null);
-        if (role) await member.roles.add(role).catch(err => console.warn('Otorol verilemedi:', err.message));
-        if (client.logger) client.logger.moderation({ action: 'OTOROL', moderator: client.user.tag, target: member.user.tag, reason: 'Otomatik rol verildi' });
-      } catch (e) { console.warn('Otorol hata:', e.message); }
-    }
-
-    const channelId = client.config.welcomeChannelId || client.config.welcomeChannel || null;
-    if (!channelId) return;
-    const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
-    if (!channel) return;
-
-    const attachment = await createWelcomeCanvas(member, true);
-    await channel.send({ 
-      content: `🎉 Aramıza hoşgeldin <@${member.id}>!`, 
-      files: [attachment] 
-    }).catch(() => {});
+// ---------- HOŞ GELDİN/GÖRÜŞÜRÜZ EMBED FONKSİYONLARI ----------
+function createWelcomeEmbed(member, isWelcome = true) {
+    const user = member.user;
+    const guild = member.guild;
     
-    if (client.logger) client.logger.info('Üye Katıldı', `${member.user.tag} katıldı.`, { thumbnail: member.user.displayAvatarURL() });
-  } catch (err) {
-    console.error('guildMemberAdd hatası:', err);
-    if (client.logger) client.logger.interactionError(member, err);
-  }
-});
+    const embed = new EmbedBuilder()
+        .setColor(isWelcome ? 0x00FF00 : 0xFF0000)
+        .setTitle(isWelcome ? '🎉 Sunucuya Hoş Geldin!' : '😢 Sunucudan Ayrıldı')
+        .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
+        .setDescription(isWelcome 
+            ? `Merhaba ${user}, **${guild.name}** sunucusuna hoş geldin!`
+            : `**${user.tag}** sunucumuzdan ayrıldı.`
+        )
+        .addFields(
+            {
+                name: '👤 Kullanıcı Bilgileri',
+                value: `• Kullanıcı: ${user.tag} (${user.id})\n• Hesap Oluşturulma: <t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
+                inline: true
+            },
+            {
+                name: isWelcome ? '📥 Katılma Bilgisi' : '📤 Ayrılma Bilgisi',
+                value: isWelcome 
+                    ? `• Sunucuya Katılma: <t:${Math.floor(member.joinedTimestamp / 1000)}:R>\n• Üye Sayısı: ${guild.memberCount}`
+                    : `• Sunucudan Ayrılma: <t:${Math.floor(Date.now() / 1000)}:R>\n• Üye Sayısı: ${guild.memberCount}`,
+                inline: true
+            }
+        )
+        .setImage(isWelcome 
+            ? 'https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&'
+            : 'https://cdn.discordapp.com/attachments/1404774897284026425/1421589268572143789/eyubi3.png?ex=68d995ad&is=68d8442d&hm=df604f07a0c4be1fb17a1a0e07cce734b6939a071dfdacc1cacc2ab75d2039a6&'
+        )
+        .setFooter({ 
+            text: isWelcome 
+                ? `${guild.name} - Keyifli vakit geçirmen dileğiyle!`
+                : `${guild.name} - Tekrar bekleriz!`,
+            iconURL: guild.iconURL({ dynamic: true })
+        })
+        .setTimestamp();
 
-client.on('guildMemberRemove', async (member) => {
-  try {
-    if (ALLOWED_GUILD_ID && member.guild.id !== ALLOWED_GUILD_ID) return;
-    const channelId = client.config.leaveChannelId || client.config.goodbyeChannelId || client.config.leaveChannel || null;
-    if (!channelId) return;
-    const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
-    if (!channel) return;
-
-    const attachment = await createWelcomeCanvas(member, false);
-    await channel.send({ 
-      content: `😢 Görüşürüz <@${member.id}>!`, 
-      files: [attachment] 
-    }).catch(() => {});
-    
-    if (client.logger) client.logger.info('Üye Ayrıldı', `${member.user.tag} ayrıldı.`, { thumbnail: member.user.displayAvatarURL() });
-  } catch (err) {
-    console.error('guildMemberRemove hatası:', err);
-    if (client.logger) client.logger.interactionError(member, err);
-  }
-});
-
+    return embed;
+}
 
 // ---------- PACK EMBED FONKSİYONLARI ----------
 function createPackEmbed1() {
@@ -269,10 +255,10 @@ client.on('guildMemberAdd', async (member) => {
     const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
     if (!channel) return;
 
-    const attachment = await createWelcomeCanvas(member, true);
+    const embed = createWelcomeEmbed(member, true);
     await channel.send({ 
       content: `🎉 Aramıza hoşgeldin <@${member.id}>!`, 
-      files: [attachment] 
+      embeds: [embed] 
     }).catch(() => {});
     
     if (client.logger) client.logger.info('Üye Katıldı', `${member.user.tag} katıldı.`, { thumbnail: member.user.displayAvatarURL() });
@@ -290,10 +276,10 @@ client.on('guildMemberRemove', async (member) => {
     const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
     if (!channel) return;
 
-    const attachment = await createWelcomeCanvas(member, false);
+    const embed = createWelcomeEmbed(member, false);
     await channel.send({ 
       content: `😢 Görüşürüz <@${member.id}>!`, 
-      files: [attachment] 
+      embeds: [embed] 
     }).catch(() => {});
     
     if (client.logger) client.logger.info('Üye Ayrıldı', `${member.user.tag} ayrıldı.`, { thumbnail: member.user.displayAvatarURL() });
@@ -723,66 +709,9 @@ process.on('uncaughtException', (err) => {
   if (client.logger) client.logger.processError('UNCAUGHT_EXCEPTION', err);
 });
 
-// ---------- Otomatik Komut Deploy ----------
-async function deployCommands() {
-    try {
-        const { REST, Routes } = require('discord.js');
-        const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
-
-        const commands = [];
-        const commandsPath = path.join(__dirname, 'commands');
-        
-        if (!fs.existsSync(commandsPath)) {
-            console.log('❌ Commands klasörü bulunamadı!');
-            return;
-        }
-
-        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-
-        for (const file of commandFiles) {
-            const filePath = path.join(commandsPath, file);
-            const command = require(filePath);
-            
-            if ('data' in command && 'execute' in command) {
-                commands.push(command.data.toJSON());
-            }
-        }
-
-        if (commands.length > 0) {
-            console.log(`🔄 ${commands.length} komut deploy ediliyor...`);
-            
-            const data = await rest.put(
-                Routes.applicationCommands(process.env.CLIENT_ID),
-                { body: commands },
-            );
-
-            console.log(`✅ ${data.length} komut başarıyla deploy edildi!`);
-        } else {
-            console.log('ℹ️  Deploy edilecek komut bulunamadı.');
-        }
-    } catch (error) {
-        console.error('❌ Otomatik komut deploy hatası:', error.message);
-        // Hata olsa da bot çalışmaya devam etsin
-    }
-}
-
-// Bot başlamadan önce komutları deploy et
-deployCommands().then(() => {
-    console.log('🚀 Bot başlatılıyor...');
-});
-
-// ---------- Bot başlat ----------
-if (!process.env.DISCORD_TOKEN) {
-    console.error('❌ .env içinde DISCORD_TOKEN yok.');
-    process.exit(1);
-}
-
-client.login(process.env.DISCORD_TOKEN);
 // ---------- Bot başlat ----------
 if (!process.env.DISCORD_TOKEN) {
   console.error('.env içinde DISCORD_TOKEN yok.');
   process.exit(1);
 }
 client.login(process.env.DISCORD_TOKEN);
-
-
