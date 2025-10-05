@@ -29,7 +29,33 @@
   "ticketStaffRoleId": "1419758604088643693",           
   "ticketPanelChannelId": "1419758606500233257",   
   "ticketPrefix": "ticket",                              
-  "ticketCloseTimeoutMinutes": 1                 
-  
-}
+  "ticketCloseTimeoutMinutes": 1 ,                
 
+  "eltyroChannelId": "ELTYRO_KANAL_ID",
+  "eltyroRoleId": "ELTYRO_ROL_ID",
+  
+  "diapotChannelId": "1423701622487388250", 
+  "diapotRoleId": "1424390055228870668",
+  
+  "nethpotChannelId": "1423701552689840208",
+  "nethpotRoleId": "1419758604159815784",
+  
+  "uhcChannelId": "1423701657866211411",
+  "uhcRoleId": "1424390579751485500",
+  
+  "smpChannelId": "1423701685133639710",
+  "smpRoleId": "1424390177232781535",
+  
+  "duraChannelId": "1423701511367819375",
+  "duraRoleId": "1424390222233210963",
+  
+  "helpfulChannelId": "1424379450136461482",
+  "helpfulRoleId": "1424390269767254197",
+  
+  "medievalChannelId": "MEDIEVAL_KANAL_ID", 
+  "medievalRoleId": "MEDIEVAL_ROL_ID",
+  
+  "shadowChannelId": "SHADOW_KANAL_ID",
+  "shadowRoleId": "SHADOW_ROL_ID"
+
+}
