@@ -109,83 +109,59 @@ function createRoleEmbed() {
         .setFooter({ text: 'İstediğiniz pack kategorilerinin bildirimlerini almak için butonlara tıklayın!' });
 }
 
-// ---------- CANVAS FONKSİYONLARI ----------
-async function createWelcomeCanvas(member, isWelcome = true) {
+// ---------- GUILD MEMBER EVENTS ----------
+client.on('guildMemberAdd', async (member) => {
   try {
-    // Font Yükleme
-    try {
-      Canvas.registerFont("./fonts/MedievalSharp-Regular.ttf", { family: "MedievalSharp" });
-    } catch (e) {
-      console.warn("⚠️ MedievalSharp fontu bulunamadı, varsayılan font kullanılacak.");
+    if (ALLOWED_GUILD_ID && member.guild.id !== ALLOWED_GUILD_ID) return;
+
+    const autoRoleId = client.config.autoRoleId || client.config.joinRoleId || null;
+    if (autoRoleId) {
+      try {
+        const role = await member.guild.roles.fetch(autoRoleId).catch(() => null);
+        if (role) await member.roles.add(role).catch(err => console.warn('Otorol verilemedi:', err.message));
+        if (client.logger) client.logger.moderation({ action: 'OTOROL', moderator: client.user.tag, target: member.user.tag, reason: 'Otomatik rol verildi' });
+      } catch (e) { console.warn('Otorol hata:', e.message); }
     }
 
-    const width = 734;
-    const height = 293;
-    const canvas = Canvas.createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+    const channelId = client.config.welcomeChannelId || client.config.welcomeChannel || null;
+    if (!channelId) return;
+    const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
+    if (!channel) return;
 
-    // Arka plan yükleme
-    let background;
-    try {
-      background = await Canvas.loadImage("hgbb3.png");
-    } catch (e) {
-      // Eğer hgbb3.png bulunamazsa, basit bir arka plan oluştur
-      ctx.fillStyle = '#1f2937';
-      ctx.fillRect(0, 0, width, height);
-      console.warn("⚠️ hgbb3.png bulunamadı, varsayılan arkaplan kullanılıyor.");
-    }
-
-    if (background) {
-      ctx.drawImage(background, 0, 0, width, height);
-    }
-
-    // Metin ayarları
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#FFFFFF";
+    const attachment = await createWelcomeCanvas(member, true);
+    await channel.send({ 
+      content: `🎉 Aramıza hoşgeldin <@${member.id}>!`, 
+      files: [attachment] 
+    }).catch(() => {});
     
-    // Başlık metni
-    ctx.font = "bold 36px MedievalSharp, Sans";
-    ctx.fillText(isWelcome ? "Hoş geldin!" : "Görüşürüz!", width / 2, 50);
-
-    // Avatar
-    const avatarSize = 130;
-    const avatarX = width / 2 - avatarSize / 2;
-    const avatarY = 80;
-    
-    let avatar;
-    try {
-      avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: "png", size: 512 }));
-    } catch (e) {
-      console.warn("⚠️ Avatar yüklenemedi:", e.message);
-      // Avatar yüklenemezse basit bir daire çiz
-      ctx.fillStyle = '#cccccc';
-      ctx.beginPath();
-      ctx.arc(width / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    if (avatar) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(width / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
-      ctx.restore();
-    }
-
-    // Kullanıcı adı
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 28px MedievalSharp, Sans";
-    ctx.fillText(member.user.username, width / 2, 260);
-
-    return new AttachmentBuilder(canvas.toBuffer(), { name: isWelcome ? "welcome.png" : "goodbye.png" });
-
-  } catch (error) {
-    console.error('Canvas oluşturma hatası:', error);
-    throw error;
+    if (client.logger) client.logger.info('Üye Katıldı', `${member.user.tag} katıldı.`, { thumbnail: member.user.displayAvatarURL() });
+  } catch (err) {
+    console.error('guildMemberAdd hatası:', err);
+    if (client.logger) client.logger.interactionError(member, err);
   }
-}
+});
+
+client.on('guildMemberRemove', async (member) => {
+  try {
+    if (ALLOWED_GUILD_ID && member.guild.id !== ALLOWED_GUILD_ID) return;
+    const channelId = client.config.leaveChannelId || client.config.goodbyeChannelId || client.config.leaveChannel || null;
+    if (!channelId) return;
+    const channel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
+    if (!channel) return;
+
+    const attachment = await createWelcomeCanvas(member, false);
+    await channel.send({ 
+      content: `😢 Görüşürüz <@${member.id}>!`, 
+      files: [attachment] 
+    }).catch(() => {});
+    
+    if (client.logger) client.logger.info('Üye Ayrıldı', `${member.user.tag} ayrıldı.`, { thumbnail: member.user.displayAvatarURL() });
+  } catch (err) {
+    console.error('guildMemberRemove hatası:', err);
+    if (client.logger) client.logger.interactionError(member, err);
+  }
+});
+
 
 // ---------- PACK EMBED FONKSİYONLARI ----------
 function createPackEmbed1() {
@@ -808,4 +784,5 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 client.login(process.env.DISCORD_TOKEN);
+
 
